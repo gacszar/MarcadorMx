@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MarcadorMX – Tu Tracker de Apuestas</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde:   #00E676;
+    --rojo:    #FF3D57;
+    --amarillo:#FFD600;
+    --fondo:   #0A0C10;
+    --panel:   #12151C;
+    --borde:   #1E2330;
+    --texto:   #E8ECF4;
+    --gris:    #8892A4;
+    --acento:  #00E676;
+    --radio:   14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,12,16,.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--borde);
+    padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 1px; }
+  .logo span { color: var(--verde); }
+  .bankroll-pill {
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 50px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .bankroll-pill b { color: var(--verde); }
+
+  /* ── NAV ── */
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(18,21,28,.97);
+    border-top: 1px solid var(--borde);
+    display: flex;
+    backdrop-filter: blur(16px);
+  }
+  .nav-btn {
+    flex: 1; padding: 12px 0 16px;
+    background: none; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--gris); font-family: 'DM Sans', sans-serif;
+    font-size: 10px; font-weight: 500; letter-spacing: .3px;
+    transition: color .2s;
+  }
+  .nav-btn.active { color: var(--verde); }
+  .nav-icon { font-size: 20px; }
+
+  /* ── VIEWS ── */
+  .view { display: none; padding: 18px 16px 90px; }
+  .view.active { display: block; }
+
+  /* ── STATS ROW ── */
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    padding: 16px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 3px;
+  }
+  .stat-card.verde::before { background: var(--verde); }
+  .stat-card.rojo::before  { background: var(--rojo); }
+  .stat-card.amarillo::before { background: var(--amarillo); }
+  .stat-card.azul::before  { background: #448AFF; }
+  .stat-label { font-size: 11px; color: var(--gris); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .stat-value { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: .5px; }
+  .stat-value.positivo { color: var(--verde); }
+  .stat-value.negativo { color: var(--rojo); }
+  .stat-sub { font-size: 11px; color: var(--gris); margin-top: 2px; }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 1px;
+    color: var(--gris);
+    margin: 20px 0 10px;
+  }
+
+  /* ── APUESTA CARD ── */
+  .apuesta-card {
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    padding: 14px;
+    margin-bottom: 10px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s;
+  }
+  .apuesta-card:active { transform: scale(.98); }
+  .apuesta-card.ganada { border-left-color: var(--verde); }
+  .apuesta-card.perdida { border-left-color: var(--rojo); }
+  .apuesta-card.pendiente { border-left-color: var(--amarillo); }
+
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .partido { font-weight: 600; font-size: 14px; line-height: 1.3; }
+  .badge {
+    font-size: 10px; font-weight: 700; padding: 3px 8px;
+    border-radius: 50px; text-transform: uppercase; letter-spacing: .5px;
+    white-space: nowrap; margin-left: 8px; flex-shrink: 0;
+  }
+  .badge.ganada  { background: rgba(0,230,118,.15); color: var(--verde); }
+  .badge.perdida { background: rgba(255,61,87,.15);  color: var(--rojo); }
+  .badge.pendiente { background: rgba(255,214,0,.15); color: var(--amarillo); }
+  .badge.push { background: rgba(68,138,255,.15); color: #448AFF; }
+
+  .card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .meta-pill {
+    background: var(--borde); border-radius: 50px;
+    padding: 3px 9px; font-size: 11px; color: var(--gris); font-weight: 500;
+  }
+  .meta-pill.momio { color: var(--texto); }
+
+  .card-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .monto { font-size: 13px; color: var(--gris); }
+  .ganancia { font-family: 'Bebas Neue', sans-serif; font-size: 20px; }
+  .ganancia.pos { color: var(--verde); }
+  .ganancia.neg { color: var(--rojo); }
+  .ganancia.neu { color: var(--amarillo); }
+
+  /* ── FAB ── */
+  .fab {
+    position: fixed; bottom: 76px; right: 20px; z-index: 99;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--verde); border: none; cursor: pointer;
+    font-size: 26px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 24px rgba(0,230,118,.4);
+    transition: transform .15s, box-shadow .15s;
+    color: #000;
+  }
+  .fab:active { transform: scale(.92); box-shadow: 0 2px 12px rgba(0,230,118,.3); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.7); backdrop-filter: blur(8px);
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border-radius: 24px 24px 0 0;
+    border-top: 1px solid var(--borde);
+    width: 100%; max-height: 92vh;
+    overflow-y: auto; padding: 20px 18px 32px;
+    animation: slideUp .25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--borde); margin: 0 auto 20px;
+  }
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px; letter-spacing: 1px; margin-bottom: 20px;
+  }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; color: var(--gris); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: block; }
+  .form-input, .form-select {
+    width: 100%; background: var(--fondo);
+    border: 1px solid var(--borde); border-radius: 10px;
+    color: var(--texto); font-family: 'DM Sans', sans-serif;
+    font-size: 15px; padding: 12px 14px;
+    outline: none; transition: border-color .2s;
+    -webkit-appearance: none; appearance: none;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--verde); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* resultado chips */
+  .resultado-chips { display: flex; gap: 8px; }
+  .chip {
+    flex: 1; padding: 11px 8px; border-radius: 10px;
+    border: 1.5px solid var(--borde); background: var(--fondo);
+    cursor: pointer; text-align: center; font-size: 13px; font-weight: 600;
+    transition: all .15s; color: var(--gris);
+  }
+  .chip.sel-ganada  { border-color: var(--verde);  background: rgba(0,230,118,.12); color: var(--verde); }
+  .chip.sel-perdida { border-color: var(--rojo);   background: rgba(255,61,87,.12);  color: var(--rojo); }
+  .chip.sel-pendiente { border-color: var(--amarillo); background: rgba(255,214,0,.12); color: var(--amarillo); }
+  .chip.sel-push    { border-color: #448AFF; background: rgba(68,138,255,.12); color: #448AFF; }
+
+  .btn-guardar {
+    width: 100%; margin-top: 20px;
+    background: var(--verde); color: #000;
+    border: none; border-radius: 12px;
+    padding: 16px; font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; letter-spacing: 1px; cursor: pointer;
+    transition: opacity .15s;
+  }
+  .btn-guardar:active { opacity: .85; }
+
+  /* ── DASHBOARD ── */
+  .chart-bar-wrap { margin-bottom: 16px; }
+  .chart-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .chart-label { font-size: 12px; width: 70px; flex-shrink: 0; color: var(--gris); }
+  .chart-track {
+    flex: 1; height: 8px; background: var(--borde); border-radius: 4px; overflow: hidden;
+  }
+  .chart-fill { height: 100%; border-radius: 4px; background: var(--verde); transition: width .6s ease; }
+  .chart-fill.neg { background: var(--rojo); }
+  .chart-val { font-size: 12px; font-weight: 600; width: 50px; text-align: right; flex-shrink: 0; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { color: var(--gris); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--borde); }
+  td { padding: 10px 6px; border-bottom: 1px solid rgba(30,35,48,.5); }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── CONFIG ── */
+  .config-card {
+    background: var(--panel); border: 1px solid var(--borde);
+    border-radius: var(--radio); padding: 16px; margin-bottom: 12px;
+  }
+  .config-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .config-row:last-child { margin-bottom: 0; }
+  .config-key { font-size: 13px; color: var(--gris); }
+  .config-val { font-weight: 700; font-size: 14px; }
+  .progress-wrap { margin-top: 10px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--gris); margin-bottom: 5px; }
+  .progress-track { height: 6px; background: var(--borde); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--verde), #00BCD4); transition: width .6s; }
+
+  .nivel-badge {
+    display: inline-block;
+    background: rgba(0,230,118,.12); color: var(--verde);
+    border: 1px solid rgba(0,230,118,.3);
+    border-radius: 50px; padding: 4px 12px;
+    font-size: 12px; font-weight: 700;
+    margin-bottom: 16px;
+  }
+
+  .empty-state {
+    text-align: center; padding: 48px 20px;
+    color: var(--gris);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; line-height: 1.5; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--borde); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="logo">Marcador<span>MX</span></div>
+  <div class="bankroll-pill">Bank: <b id="topbank">$0</b></div>
+</header>
+
+<!-- VIEWS -->
+<!-- INICIO -->
+<div class="view active" id="view-inicio">
+  <div class="stats-grid">
+    <div class="stat-card verde">
+      <div class="stat-label">Ganancia Neta</div>
+      <div class="stat-value positivo" id="stat-ganancia">$0</div>
+      <div class="stat-sub" id="stat-roi">ROI: 0%</div>
+    </div>
+    <div class="stat-card azul">
+      <div class="stat-label">% Acierto</div>
+      <div class="stat-value" id="stat-acierto">0%</div>
+      <div class="stat-sub" id="stat-record">0G – 0P</div>
+    </div>
+    <div class="stat-card amarillo">
+      <div class="stat-label">Total Apostado</div>
+      <div class="stat-value" id="stat-apostado">$0</div>
+      <div class="stat-sub" id="stat-total">0 apuestas</div>
+    </div>
+    <div class="stat-card rojo">
+      <div class="stat-label">Unidad Actual</div>
+      <div class="stat-value" id="stat-unidad">$250</div>
+      <div class="stat-sub" id="stat-nivel-txt">Nivel 1</div>
+    </div>
+  </div>
+
+  <div class="section-title">Últimas Apuestas</div>
+  <div id="lista-apuestas">
+    <div class="empty-state">
+      <div class="empty-icon">⚽</div>
+      <div class="empty-text">Aún no tienes apuestas.<br>Toca el <b style="color:var(--verde)">+</b> para registrar tu primera.</div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div class="view" id="view-historial">
+  <div class="section-title">Todas las Apuestas</div>
+  <div id="lista-historial">
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">Sin apuestas registradas.</div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="view" id="view-dashboard">
+  <div class="section-title">Rendimiento por Deporte</div>
+  <div class="chart-bar-wrap" id="chart-deportes"></div>
+
+  <div class="section-title">Rendimiento por Casa</div>
+  <div class="chart-bar-wrap" id="chart-casas"></div>
+
+  <div class="section-title">Estadísticas Detalladas</div>
+  <div class="table-wrap">
+    <table id="tabla-stats">
+      <thead><tr><th>Casa</th><th>Apuestas</th><th>Ganadas</th><th>ROI</th></tr></thead>
+      <tbody id="tbody-casas"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div class="view" id="view-config">
+  <div class="nivel-badge" id="nivel-badge">🏆 Nivel 1 · En construcción</div>
+
+  <div class="config-card">
+    <div class="section-title" style="margin-top:0">Bankroll</div>
+    <div class="config-row">
+      <span class="config-key">Bankroll Total</span>
+      <span class="config-val" id="cfg-bank">$5,000</span>
+    </div>
+    <div class="config-row">
+      <span class="config-key">Unidad Base</span>
+      <span class="config-val" id="cfg-unidad">$250</span>
+    </div>
+    <div class="config-row">
+      <span class="config-key">% por Unidad</span>
+      <span class="config-val" id="cfg-pct">5.0%</span>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Meta Nivel 2 ($500/apuesta)</span>
+        <span id="pct-nivel2">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="bar-nivel2" style="width:0%"></div></div>
+    </div>
+    <div class="progress-wrap" style="margin-top:10px">
+      <div class="progress-label">
+        <span>Meta Nivel 3 ($1,000/apuesta)</span>
+        <span id="pct-nivel3">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="bar-nivel3" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <div class="config-card">
+    <div class="section-title" style="margin-top:0">Editar Configuración</div>
+    <div class="form-group">
+      <label class="form-label">Bankroll Total ($MXN)</label>
+      <input type="number" class="form-input" id="input-bank" placeholder="5000">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Unidad Base ($MXN)</label>
+      <input type="number" class="form-input" id="input-unidad" placeholder="250">
+    </div>
+    <button class="btn-guardar" onclick="saveConfig()">Guardar Configuración</button>
+  </div>
+
+  <div class="config-card">
+    <div class="section-title" style="margin-top:0">Casas Configuradas</div>
+    <div style="font-size:13px; color:var(--gris); line-height:1.8">
+      ✅ Playdoit &nbsp; ✅ Betsson &nbsp; ✅ Betcris<br>
+      ✅ Betway &nbsp; ✅ Pinnacle &nbsp; ✅ Stake<br>
+      ✅ Novibet &nbsp; ✅ 1xBet
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-top:24px; font-size:11px; color:var(--gris)">
+    MarcadorMX v1.0 · Hecho para el apostador mexicano 🇲🇽
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showView('inicio',this)">
+    <span class="nav-icon">🏠</span>Inicio
+  </button>
+  <button class="nav-btn" onclick="showView('historial',this)">
+    <span class="nav-icon">📋</span>Historial
+  </button>
+  <button class="nav-btn" onclick="showView('dashboard',this)">
+    <span class="nav-icon">📊</span>Stats
+  </button>
+  <button class="nav-btn" onclick="showView('config',this)">
+    <span class="nav-icon">⚙️</span>Config
+  </button>
+</nav>
+
+<!-- FAB -->
+<button class="fab" onclick="openModal()">+</button>
+
+<!-- MODAL NUEVA APUESTA -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nueva Apuesta</div>
+
+    <div class="form-group">
+      <label class="form-label">Partido / Evento</label>
+      <input type="text" class="form-input" id="f-partido" placeholder="Ej: América vs Chivas">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Deporte</label>
+        <select class="form-select" id="f-deporte">
+          <option value="Fútbol">⚽ Fútbol</option>
+          <option value="NBA">🏀 NBA</option>
+          <option value="NFL">🏈 NFL</option>
+          <option value="Tenis">🎾 Tenis</option>
+          <option value="MLB">⚾ MLB</option>
+          <option value="Otro">🎯 Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Liga</label>
+        <input type="text" class="form-input" id="f-liga" placeholder="Ej: Liga MX">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Selección / Apuesta</label>
+      <input type="text" class="form-input" id="f-seleccion" placeholder="Ej: Over 2.5 goles">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="f-tipo">
+          <option>1X2</option>
+          <option>Handicap</option>
+          <option>Over/Under</option>
+          <option>Ambos Marcan</option>
+          <option>Moneyline</option>
+          <option>Spread</option>
+          <option>Total</option>
+          <option>Prop</option>
+          <option>Live</option>
+          <option>Combinada</option>
+          <option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Casa</label>
+        <select class="form-select" id="f-casa">
+          <option>Playdoit</option>
+          <option>Betsson</option>
+          <option>Betcris</option>
+          <option>Betway</option>
+          <option>Pinnacle</option>
+          <option>Stake</option>
+          <option>Novibet</option>
+          <option>1xBet</option>
+          <option>Otro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Momio (decimal)</label>
+        <input type="number" step="0.01" class="form-input" id="f-momio" placeholder="1.85">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unidades</label>
+        <input type="number" step="0.5" class="form-input" id="f-unidades" placeholder="1">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Monto ($MXN)</label>
+      <input type="number" class="form-input" id="f-monto" placeholder="Se calcula automático">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Resultado</label>
+      <div class="resultado-chips">
+        <div class="chip sel-pendiente" data-val="pendiente" onclick="selectChip(this)">⏳ Pend.</div>
+        <div class="chip" data-val="ganada" onclick="selectChip(this)">✅ Gané</div>
+        <div class="chip" data-val="perdida" onclick="selectChip(this)">❌ Perdí</div>
+        <div class="chip" data-val="push" onclick="selectChip(this)">↩ Push</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notas (opcional)</label>
+      <input type="text" class="form-input" id="f-notas" placeholder="Análisis o motivo de la apuesta">
+    </div>
+
+    <button class="btn-guardar" onclick="guardarApuesta()">Guardar Apuesta</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let apuestas = JSON.parse(localStorage.getItem('marcadormx_apuestas') || '[]');
+let config   = JSON.parse(localStorage.getItem('marcadormx_config')   || '{"bank":5000,"unidad":250}');
+let resultado_sel = 'pendiente';
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'config')    renderConfig();
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  // auto-fill monto
+  document.getElementById('f-unidades').addEventListener('input', calcMonto);
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  resetForm();
+}
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+function calcMonto() {
+  const u = parseFloat(document.getElementById('f-unidades').value) || 0;
+  document.getElementById('f-monto').value = (u * config.unidad) || '';
+}
+function selectChip(el) {
+  document.querySelectorAll('.chip').forEach(c => c.className = 'chip');
+  el.classList.add('sel-' + el.dataset.val);
+  resultado_sel = el.dataset.val;
+}
+function resetForm() {
+  ['f-partido','f-liga','f-seleccion','f-momio','f-unidades','f-monto','f-notas']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-deporte').selectedIndex = 0;
+  document.getElementById('f-tipo').selectedIndex = 0;
+  document.getElementById('f-casa').selectedIndex = 0;
+  resultado_sel = 'pendiente';
+  document.querySelectorAll('.chip').forEach(c => c.className = 'chip');
+  document.querySelector('[data-val="pendiente"]').classList.add('sel-pendiente');
+}
+
+// ── GUARDAR APUESTA ────────────────────────────────────────────────────────
+function guardarApuesta() {
+  const partido = document.getElementById('f-partido').value.trim();
+  if (!partido) { alert('Escribe el partido o evento.'); return; }
+  const momio   = parseFloat(document.getElementById('f-momio').value) || 1;
+  const unidades= parseFloat(document.getElementById('f-unidades').value) || 1;
+  const monto   = parseFloat(document.getElementById('f-monto').value)   || (unidades * config.unidad);
+  let ganancia = 0;
+  if (resultado_sel === 'ganada')  ganancia = +(monto * (momio - 1)).toFixed(2);
+  if (resultado_sel === 'perdida') ganancia = -monto;
+  if (resultado_sel === 'push')    ganancia = 0;
+
+  const ap = {
+    id: Date.now(),
+    fecha: new Date().toLocaleDateString('es-MX'),
+    partido,
+    liga:      document.getElementById('f-liga').value.trim(),
+    deporte:   document.getElementById('f-deporte').value,
+    seleccion: document.getElementById('f-seleccion').value.trim(),
+    tipo:      document.getElementById('f-tipo').value,
+    casa:      document.getElementById('f-casa').value,
+    momio, unidades, monto,
+    resultado: resultado_sel,
+    ganancia,
+    notas:     document.getElementById('f-notas').value.trim(),
+  };
+  apuestas.unshift(ap);
+  save();
+  closeModal();
+  renderInicio();
+}
+
+// ── RENDER INICIO ──────────────────────────────────────────────────────────
+function renderInicio() {
+  const resueltas = apuestas.filter(a => a.resultado !== 'pendiente');
+  const ganadas   = resueltas.filter(a => a.resultado === 'ganada').length;
+  const perdidas  = resueltas.filter(a => a.resultado === 'perdida').length;
+  const apostado  = resueltas.reduce((s,a) => s + a.monto, 0);
+  const neta      = resueltas.reduce((s,a) => s + a.ganancia, 0);
+  const roi       = apostado ? (neta / apostado * 100) : 0;
+  const acierto   = (ganadas + perdidas) ? (ganadas / (ganadas + perdidas) * 100) : 0;
+
+  const fmt = n => (n >= 0 ? '+' : '') + '$' + Math.abs(n).toLocaleString('es-MX', {maximumFractionDigits:0});
+  const fmtP = n => (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+
+  document.getElementById('stat-ganancia').textContent = fmt(neta);
+  document.getElementById('stat-ganancia').className = 'stat-value ' + (neta >= 0 ? 'positivo' : 'negativo');
+  document.getElementById('stat-roi').textContent     = 'ROI: ' + fmtP(roi);
+  document.getElementById('stat-acierto').textContent = acierto.toFixed(0) + '%';
+  document.getElementById('stat-record').textContent  = ganadas + 'G – ' + perdidas + 'P';
+  document.getElementById('stat-apostado').textContent= '$' + apostado.toLocaleString('es-MX',{maximumFractionDigits:0});
+  document.getElementById('stat-total').textContent   = apuestas.length + ' apuestas';
+  document.getElementById('stat-unidad').textContent  = '$' + config.unidad.toLocaleString('es-MX');
+  const bankActualTop = config.bank + neta;
+  document.getElementById('topbank').textContent = '$' + bankActualTop.toLocaleString('es-MX', {maximumFractionDigits:0});
+  document.getElementById('topbank').style.color = neta >= 0 ? 'var(--verde)' : 'var(--rojo)';
+
+  // Nivel
+  const bankActual = config.bank + neta;
+  let nivel = 1, nivelTxt = 'Nivel 1';
+  if (bankActual >= 50000) { nivel = 3; nivelTxt = 'Nivel 3 · $1,000/ap'; }
+  else if (bankActual >= 25000) { nivel = 2; nivelTxt = 'Nivel 2 · $500/ap'; }
+  document.getElementById('stat-nivel-txt').textContent = nivelTxt;
+
+  // Lista
+  const lista = document.getElementById('lista-apuestas');
+  if (!apuestas.length) {
+    lista.innerHTML = `<div class="empty-state"><div class="empty-icon">⚽</div><div class="empty-text">Aún no tienes apuestas.<br>Toca el <b style="color:var(--verde)">+</b> para registrar tu primera.</div></div>`;
+    return;
+  }
+  lista.innerHTML = apuestas.slice(0,10).map(cardHTML).join('');
+
+  document.getElementById('lista-historial').innerHTML =
+    apuestas.length ? apuestas.map(cardHTML).join('') :
+    `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">Sin apuestas registradas.</div></div>`;
+}
+
+function cardHTML(a) {
+  const icons = { Fútbol:'⚽', NBA:'🏀', NFL:'🏈', Tenis:'🎾', MLB:'⚾', Otro:'🎯' };
+  const gLabel = a.ganancia > 0 ? '+$'+a.ganancia.toLocaleString('es-MX',{maximumFractionDigits:0})
+               : a.ganancia < 0 ? '-$'+Math.abs(a.ganancia).toLocaleString('es-MX',{maximumFractionDigits:0})
+               : '$0';
+  const gClass = a.ganancia > 0 ? 'pos' : a.ganancia < 0 ? 'neg' : 'neu';
+  const badgeLabel = {ganada:'Ganada',perdida:'Perdida',pendiente:'Pendiente',push:'Push'}[a.resultado];
+  return `
+  <div class="apuesta-card ${a.resultado}">
+    <div class="card-top">
+      <div class="partido">${icons[a.deporte]||'🎯'} ${a.partido}</div>
+      <span class="badge ${a.resultado}">${badgeLabel}</span>
+    </div>
+    <div class="card-meta">
+      <span class="meta-pill">${a.deporte}</span>
+      ${a.liga ? `<span class="meta-pill">${a.liga}</span>` : ''}
+      <span class="meta-pill">${a.tipo}</span>
+      <span class="meta-pill">${a.casa}</span>
+      <span class="meta-pill momio">@${a.momio}</span>
+    </div>
+    <div class="card-bottom">
+      <span class="monto">${a.fecha} · $${a.monto.toLocaleString('es-MX',{maximumFractionDigits:0})} MXN · ${a.unidades}u</span>
+      <span class="ganancia ${gClass}">${gLabel}</span>
+    </div>
+  </div>`;
+}
+
+// ── RENDER DASHBOARD ────────────────────────────────────────────────────────
+function renderDashboard() {
+  const resueltas = apuestas.filter(a => a.resultado !== 'pendiente');
+  const deportes  = ['Fútbol','NBA','NFL','Tenis','MLB','Otro'];
+  const casas     = ['Playdoit','Betsson','Betcris','Betway','Pinnacle','Stake','Novibet','1xBet'];
+
+  function stats(arr, key, val) {
+    const sub = resueltas.filter(a => a[key] === val);
+    const ap  = sub.length;
+    const gan = sub.reduce((s,a) => s + a.ganancia, 0);
+    const apo = sub.reduce((s,a) => s + a.monto, 0);
+    const roi = apo ? (gan / apo * 100) : 0;
+    const g   = sub.filter(a => a.resultado === 'ganada').length;
+    return { ap, gan, apo, roi, g };
+  }
+
+  const maxAp = Math.max(1, ...deportes.map(d => stats(resueltas,'deporte',d).ap));
+
+  document.getElementById('chart-deportes').innerHTML = deportes.map(d => {
+    const s = stats(resueltas,'deporte',d);
+    if (!s.ap) return '';
+    const pct = (s.ap / maxAp * 100).toFixed(0);
+    const isPos = s.gan >= 0;
+    return `<div class="chart-row">
+      <div class="chart-label">${d}</div>
+      <div class="chart-track"><div class="chart-fill ${isPos?'':'neg'}" style="width:${pct}%"></div></div>
+      <div class="chart-val" style="color:${isPos?'var(--verde)':'var(--rojo)'}">${isPos?'+':''}${s.gan.toFixed(0)}</div>
+    </div>`;
+  }).join('');
+
+  const maxCa = Math.max(1, ...casas.map(c => stats(resueltas,'casa',c).ap));
+  document.getElementById('chart-casas').innerHTML = casas.map(c => {
+    const s = stats(resueltas,'casa',c);
+    if (!s.ap) return '';
+    const pct = (s.ap / maxCa * 100).toFixed(0);
+    const isPos = s.gan >= 0;
+    return `<div class="chart-row">
+      <div class="chart-label">${c}</div>
+      <div class="chart-track"><div class="chart-fill ${isPos?'':'neg'}" style="width:${pct}%"></div></div>
+      <div class="chart-val" style="color:${isPos?'var(--verde)':'var(--rojo)'}">${isPos?'+':''}${s.gan.toFixed(0)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('tbody-casas').innerHTML = casas.map(c => {
+    const s = stats(resueltas,'casa',c);
+    if (!s.ap) return '';
+    return `<tr>
+      <td style="font-weight:600">${c}</td>
+      <td>${s.ap}</td>
+      <td>${s.g}</td>
+      <td style="color:${s.roi>=0?'var(--verde)':'var(--rojo)'};font-weight:700">${s.roi.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── RENDER CONFIG ──────────────────────────────────────────────────────────
+function renderConfig() {
+  const neta = apuestas.filter(a=>a.resultado!=='pendiente').reduce((s,a)=>s+a.ganancia,0);
+  const bankActual = config.bank + neta;
+
+  document.getElementById('cfg-bank').textContent   = '$' + config.bank.toLocaleString('es-MX');
+  document.getElementById('cfg-unidad').textContent = '$' + config.unidad.toLocaleString('es-MX');
+  document.getElementById('cfg-pct').textContent    = (config.unidad / config.bank * 100).toFixed(1) + '%';
+  document.getElementById('input-bank').value       = config.bank;
+  document.getElementById('input-unidad').value     = config.unidad;
+
+  const pct2 = Math.min(100, (bankActual / 25000 * 100)).toFixed(0);
+  const pct3 = Math.min(100, (bankActual / 50000 * 100)).toFixed(0);
+  document.getElementById('pct-nivel2').textContent = pct2 + '%';
+  document.getElementById('pct-nivel3').textContent = pct3 + '%';
+  document.getElementById('bar-nivel2').style.width = pct2 + '%';
+  document.getElementById('bar-nivel3').style.width = pct3 + '%';
+
+  let badge = '🏗️ Nivel 1 · En construcción';
+  if (bankActual >= 50000) badge = '👑 Nivel 3 · $1,000/apuesta';
+  else if (bankActual >= 25000) badge = '🚀 Nivel 2 · $500/apuesta';
+  document.getElementById('nivel-badge').textContent = badge;
+}
+
+function saveConfig() {
+  const b = parseFloat(document.getElementById('input-bank').value);
+  const u = parseFloat(document.getElementById('input-unidad').value);
+  if (!b || !u) { alert('Ingresa valores válidos.'); return; }
+  config = { bank: b, unidad: u };
+  save();
+  renderConfig();
+  renderInicio();
+  alert('✅ Configuración guardada.');
+}
+
+// ── PERSISTENCE ────────────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('marcadormx_apuestas', JSON.stringify(apuestas));
+  localStorage.setItem('marcadormx_config',   JSON.stringify(config));
+  renderInicio();
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+renderInicio();
+</script>
+</body>
+</html>
